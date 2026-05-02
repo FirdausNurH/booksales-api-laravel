@@ -16,7 +16,6 @@ class GenreController extends Controller
     {
         $query = Genre::query();
 
-        // Fitur pencarian berdasarkan nama
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
@@ -68,5 +67,96 @@ class GenreController extends Controller
                 'updated_at'  => $genre->updated_at->toIso8601String(),
             ],
         ], 201);
+    }
+
+    /**
+     * GET /api/genres/{id}
+     * Show detail data genre + Validasi 404
+     */
+    public function show($id): JsonResponse
+    {
+        $genre = Genre::find($id);
+
+        if (!$genre) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data genre dengan ID ' . $id . ' tidak ditemukan',
+                'data'    => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Detail genre berhasil diambil',
+            'data'    => [
+                'id'          => $genre->id,
+                'name'        => $genre->name,
+                'description' => $genre->description,
+                'created_at'  => $genre->created_at->toIso8601String(),
+                'updated_at'  => $genre->updated_at->toIso8601String(),
+            ],
+        ], 200);
+    }
+
+    /**
+     * PUT /api/genres/{id}
+     * Update data genre + Validasi 404
+     */
+    public function update(Request $request, $id): JsonResponse
+    {
+        $genre = Genre::find($id);
+
+        if (!$genre) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data genre dengan ID ' . $id . ' tidak ditemukan',
+                'data'    => null,
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'name'        => 'sometimes|required|string|max:255|unique:genres,name,' . $id,
+            'description' => 'nullable|string',
+        ]);
+
+        $genre->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Genre berhasil diperbarui',
+            'data'    => [
+                'id'          => $genre->id,
+                'name'        => $genre->name,
+                'description' => $genre->description,
+                'created_at'  => $genre->created_at->toIso8601String(),
+                'updated_at'  => $genre->updated_at->toIso8601String(),
+            ],
+        ], 200);
+    }
+
+    /**
+     * DELETE /api/genres/{id}
+     * Destroy data genre + Validasi 404
+     */
+    public function destroy($id): JsonResponse
+    {
+        $genre = Genre::find($id);
+
+        if (!$genre) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data genre dengan ID ' . $id . ' tidak ditemukan',
+                'data'    => null,
+            ], 404);
+        }
+
+        $genreName = $genre->name;
+        $genre->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Genre \"{$genreName}\" berhasil dihapus",
+            'data'    => null,
+        ], 200);
     }
 }
