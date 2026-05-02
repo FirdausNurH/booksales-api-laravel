@@ -12,17 +12,50 @@ use App\Http\Controllers\StatsController;
 |--------------------------------------------------------------------------
 */
 
-// Route Statistik (custom)
+// =============================================
+// ROUTE PUBLIK (Tanpa Autentikasi)
+// Bisa diakses siapa saja (Read All & Show)
+// =============================================
 Route::get('/stats', [StatsController::class, 'index']);
 
-// Route khusus Author (harus sebelum apiResource agar tidak dianggap parameter {author})
-Route::get('/authors/{author}/books', [AuthorController::class, 'books']);
+// Author Publik
+Route::apiResource('authors', AuthorController::class)->only([
+    'index', 'show'
+]);
 
-// apiResource: Genre (otomatis mendaftarkan index, store, show, update, destroy)
-Route::apiResource('genres', GenreController::class);
+// Genre Publik
+Route::apiResource('genres', GenreController::class)->only([
+    'index', 'show'
+]);
 
-// apiResource: Author (otomatis mendaftarkan index, store, show, update, destroy)
-Route::apiResource('authors', AuthorController::class);
+// Books Publik (Read All & Show)
+Route::apiResource('books', BookController::class)->only([
+    'index', 'show'
+]);
 
-// apiResource: Books
-Route::apiResource('books', BookController::class);
+
+// =============================================
+// ROUTE ADMIN (Dilindungi Middleware 'admin')
+// Hanya bisa diakses jika membawa Header X-Admin-Key yang benar
+// Berisi fitur Create, Update, Destroy
+// =============================================
+Route::middleware('admin')->group(function () {
+
+    // Route khusus relasi (tetap di dalam group admin)
+    Route::get('/authors/{author}/books', [AuthorController::class, 'books']);
+
+    // Author Admin (Create, Update, Destroy)
+    Route::apiResource('authors', AuthorController::class)->only([
+        'store', 'update', 'destroy'
+    ]);
+
+    // Genre Admin (Create, Update, Destroy)
+    Route::apiResource('genres', GenreController::class)->only([
+        'store', 'update', 'destroy'
+    ]);
+
+    // Books Admin (Create, Update, Destroy)
+    Route::apiResource('books', BookController::class)->only([
+        'store', 'update', 'destroy'
+    ]);
+});
