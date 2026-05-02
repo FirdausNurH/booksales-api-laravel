@@ -3,40 +3,70 @@
 namespace App\Http\Controllers;
 
 use App\Models\Genre;
-
-/*
-|--------------------------------------------------------------------------
-| Controller — GenreController
-|--------------------------------------------------------------------------
-|
-| Controller menerima request dari Route, kemudian mengambil data
-| dari Model (Genre), lalu meneruskannya ke View agar ditampilkan.
-| Controller berperan sebagai perantara antara Model dan View.
-|
-*/
+use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class GenreController extends Controller
 {
     /**
-     * Menampilkan seluruh data genre ke view.
-     *
-     * Alur MVC:
-     * 1. Route (web.php) menerima GET /genres
-     * 2. Controller ini dipanggil
-     * 3. Mengambil data dari Model Genre
-     * 4. Meneruskan data ke View genres.index
-     *
-     * @return \Illuminate\View\View
+     * GET /api/genres
+     * Read all data genre
      */
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        // Langkah 1: Instance Model
-        $genreModel = new Genre();
+        $query = Genre::query();
 
-        // Langkah 2: Ambil data dari Model
-        $genres = $genreModel->getAll();
+        // Fitur pencarian berdasarkan nama
+        if ($request->has('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
 
-        // Langkah 3: Kirim data ke View
-        return view('genres.index', compact('genres'));
+        $genres = $query->orderBy('name', 'asc')->paginate($request->get('per_page', 10));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Daftar genre berhasil diambil',
+            'meta'    => [
+                'current_page' => $genres->currentPage(),
+                'last_page'    => $genres->lastPage(),
+                'per_page'     => $genres->perPage(),
+                'total'        => $genres->total(),
+            ],
+            'data' => $genres->map(function ($genre) {
+                return [
+                    'id'          => $genre->id,
+                    'name'        => $genre->name,
+                    'description' => $genre->description,
+                    'created_at'  => $genre->created_at->toIso8601String(),
+                    'updated_at'  => $genre->updated_at->toIso8601String(),
+                ];
+            }),
+        ], 200);
+    }
+
+    /**
+     * POST /api/genres
+     * Create data genre baru
+     */
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name'        => 'required|string|max:255|unique:genres,name',
+            'description' => 'nullable|string',
+        ]);
+
+        $genre = Genre::create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Genre berhasil ditambahkan',
+            'data'    => [
+                'id'          => $genre->id,
+                'name'        => $genre->name,
+                'description' => $genre->description,
+                'created_at'  => $genre->created_at->toIso8601String(),
+                'updated_at'  => $genre->updated_at->toIso8601String(),
+            ],
+        ], 201);
     }
 }
